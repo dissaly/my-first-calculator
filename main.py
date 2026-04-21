@@ -1,37 +1,56 @@
+import telebot
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+TOKEN = os.getenv("BOT_TOKEN")
+
+bot = telebot.TeleBot(TOKEN)
 
 
-print(os.path.abspath(__file__))
+@bot.message_handler(commands=["start"])
+def start(message):
+    bot.reply_to(
+        message,
+        "Привіт! Я супер-калькулятор. 🧮\nЯ розумію коми, крапки та навіть приклади з дужками!",
+    )
 
 
-def calculator():
-
-    print("Калькулятор активовано")
-
+@bot.message_handler(content_types=["text"])
+def calculate(message):
     try:
 
-        num1 = float(input("Введіть перше число: ").strip())
-        operator = input("Введіть +,-,*,/: ").strip()
-        num2 = float(input("Введіть друге число: ").strip())
+        user_input = (
+            message.text.replace(",", ".")
+            .replace("×", "*")
+            .replace("%", "/100")
+            .replace("[", "(")
+            .replace("]", ")")
+            .replace(":", "/")
+        )
 
-        if operator == "+":
-            result = num1 + num2
-        elif operator == "-":
-            result = num1 - num2
-        elif operator == "*":
-            result = num1 * num2
-        elif operator == "/":
-            result = num1 / num2 if num2 != 0 else "Помилка: ділення на нуль"
+        result = eval(user_input)
 
-        output = f"{num1} {operator} {num2} = {result}"
-        print(output)
+        output = f"Результат: {result}"
+        bot.reply_to(message, output)
 
-        file = open("results.txt", "a", encoding="utf-8")
-        file.write(output + "\n")
-        file.close()
+        with open("results.txt", "a", encoding="utf-8") as file:
+            file.write(f"{user_input} = {result}\n")
 
-    except:
-        print("Помилка ти ввій невідомий символ")
+    except ZeroDivisionError:
+        bot.reply_to(message, "Помилка: на нуль ділити не можна! ❌")
+    except Exception:
+        bot.reply_to(
+            message, "Не можу це порахувати. Пиши приклади цифрами, наприклад: (2+3)*4"
+        )
 
 
-calculator()
+@bot.message_handler(
+    content_types=["photo", "audio", "voice", "video", "document", "sticker"]
+)
+def handle_media(message):
+    bot.reply_to(message, "Гарна спроба! Але я працюю тільки з текстом і цифрами. 😉")
+
+
+print("Бот запущений і готовий до тестів...")
+bot.infinity_polling()
